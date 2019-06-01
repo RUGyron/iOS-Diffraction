@@ -3,7 +3,7 @@
 //  Prism Refraction
 //
 //  Created by Alexey Voronov on 26/05/2019.
-//  Copyright © 2019 Alexey Voronov. All rights reserved.
+//  Copyright © 2019 Vladislav Pivosh. All rights reserved.
 //
 
 import UIKit
