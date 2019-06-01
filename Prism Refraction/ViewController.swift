@@ -2,7 +2,7 @@
 //  ViewController.swift
 //  Prism Refraction
 //
-//  Created by Alexey Voronov on 26/05/2019.
+//  Created by Vladislav Pivosh on 26/05/2019.
 //  Copyright © 2019 Vladislav Pivosh. All rights reserved.
 //
 
