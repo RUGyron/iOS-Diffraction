@@ -21,6 +21,8 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     var t1h = Int()
     var t2h = Int()
     
+    var currentNode : SKNode?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         let sceneView = SKView(frame: self.view.bounds)
@@ -30,26 +32,13 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         sceneView.isMultipleTouchEnabled = true
         sceneView.presentScene(scene)
         sceneView.showsFPS = true
-        sceneView.showsPhysics = false
+        sceneView.showsPhysics = true
         self.view.addSubview(sceneView)
 
         
-        addWall(a: CGPoint(x: 325, y: 300), b: CGPoint(x: 50, y: 300))
-        addWall(a: CGPoint(x: 325, y: 200), b: CGPoint(x: 50, y: 200))
-        
-        addWall(a: CGPoint(x: 325, y: 300), b: CGPoint(x: 325, y: 200))
-        addWall(a: CGPoint(x: 50, y: 300), b: CGPoint(x: 50, y: 200))
-        
-        addWall(a: CGPoint(x: 325, y: 600), b: CGPoint(x: 50, y: 600))
-        addWall(a: CGPoint(x: 325, y: 500), b: CGPoint(x: 50, y: 500))
-        
-        addWall(a: CGPoint(x: 325, y: 600), b: CGPoint(x: 325, y: 500))
-        addWall(a: CGPoint(x: 50, y: 600), b: CGPoint(x: 50, y: 500))
-        
-        addWall(a: CGPoint(x: 50, y: 400), b: CGPoint(x: 375/2, y: 450))
-        addWall(a: CGPoint(x: 375/2, y: 450), b: CGPoint(x: 325, y: 400))
-        addWall(a: CGPoint(x: 325, y: 400), b: CGPoint(x: 375/2, y: 350))
-        addWall(a: CGPoint(x: 375/2, y: 350), b: CGPoint(x: 50, y: 400))
+        addFigure(id: 2, pos: CGPoint(x: 100, y: 100))
+        addFigure(id: 1, pos: CGPoint(x: 0, y: 0))
+        addFigure(id: 1, pos: CGPoint(x: 100, y: 400))
         
     }
     
@@ -61,7 +50,33 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         }
     }
     
-    func addWall(a: CGPoint, b: CGPoint) {
+    func addFigure(id: Int, pos: CGPoint) {
+        let figure = SKNode()
+        
+        switch id {
+        case 1:
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0)))
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0)))
+        case 2:
+            figure.addChild(addWall(a: CGPoint(x: -50, y: 0), b: CGPoint(x: 0, y: 50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 50, y: 0)))
+            figure.addChild(addWall(a: CGPoint(x: -50, y: 0), b: CGPoint(x: 50, y: 0)))
+        default:
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0)))
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0)))
+        }
+        
+        figure.position = pos
+        figure.name = "draggable"
+        
+        scene.addChild(figure)
+    }
+    
+    func addWall(a: CGPoint, b: CGPoint) -> SKNode {
         let yourline = SKShapeNode()
         let pathToDraw = CGMutablePath()
         pathToDraw.move(to: a)
@@ -72,7 +87,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         yourline.glowWidth = 1.0
         yourline.physicsBody = SKPhysicsBody(edgeFrom: a, to: b)
         yourline.physicsBody?.isDynamic = false
-        scene.addChild(yourline)
+        return yourline
     }
     
     func addLine(a: CGPoint, b: CGPoint, hue: CGFloat) {
@@ -148,7 +163,22 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         }
     }
     
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if let touch = touches.first {
+            let location = touch.location(in: self.scene)
+            
+            let touchedNodes = self.scene.nodes(at: location)
+            for node in touchedNodes.reversed() {
+                if node.name == "draggable" {
+                    self.currentNode = node
+                }
+            }
+        }
+    }
+    
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.currentNode = nil
+        
         for touch in touches {
             if touch.hash == t1h {
                 t1h = 0
@@ -161,6 +191,12 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        
+        if let touch = touches.first, let node = self.currentNode {
+            let touchLocation = touch.location(in: self.scene)
+            node.position = touchLocation
+        }
+        
         // state is needed to define if touch is 1 or 2 (2 = true)
         var state:Bool = false
         
