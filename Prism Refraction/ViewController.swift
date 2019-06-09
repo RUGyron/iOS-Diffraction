@@ -13,13 +13,22 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     
     var scene: SKScene = SKScene(size: .zero)
     var nowangle: CGFloat = .pi / 2
+    var optical_n: Float = 0.0
     
+//    Mechanics
     var t1x = CGFloat()
     var t1y = CGFloat()
     var t2x = CGFloat()
     var t2y = CGFloat()
     var t1h = Int()
     var t2h = Int()
+    var rects = [[[CGFloat]]]()
+//    GUI
+    var navBar = UISegmentedControl(items: ["Лучи", "Перемещение", "Среды"])
+    var slider = UISlider()
+    var label = UILabel()
+    var deleteBtn = UIButton()
+    var currentNode : SKNode?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,40 +38,112 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         scene.delegate = self
         sceneView.isMultipleTouchEnabled = true
         sceneView.presentScene(scene)
-        sceneView.showsFPS = true
+        sceneView.showsFPS = false
         sceneView.showsPhysics = false
         self.view.addSubview(sceneView)
-
+        setupInterface()
+    }
+    
+    func setupInterface() {
+        deleteBtn.frame = CGRect(x: 250, y: 15, width: 150, height: 100)
+        deleteBtn.setTitle("Очистить", for: .normal)
+        deleteBtn.addTarget(self, action: #selector(deletebtnPressed), for: .touchDown)
         
-        addWall(a: CGPoint(x: 325, y: 300), b: CGPoint(x: 50, y: 300))
-        addWall(a: CGPoint(x: 325, y: 200), b: CGPoint(x: 50, y: 200))
+        slider.frame = CGRect(x: 50, y: self.view.frame.size.height - 100,  width: 275, height: 50)
+        slider.minimumValue = 1.0003
+        slider.maximumValue = 2.42
+        slider.addTarget(self, action: #selector(onSliderValChanged(slider:event:)), for: .valueChanged)
         
-        addWall(a: CGPoint(x: 325, y: 300), b: CGPoint(x: 325, y: 200))
-        addWall(a: CGPoint(x: 50, y: 300), b: CGPoint(x: 50, y: 200))
+        label.frame = CGRect(x: 350/2, y: self.view.frame.size.height - 150, width: 100, height: 50)
+        label.textColor = .white
+        label.text = "\(slider.value)"
         
-        addWall(a: CGPoint(x: 325, y: 600), b: CGPoint(x: 50, y: 600))
-        addWall(a: CGPoint(x: 325, y: 500), b: CGPoint(x: 50, y: 500))
+        navBar.selectedSegmentIndex = 0
+        navBar.frame = CGRect(x: 50, y: 50, width: 200, height: 30)
+        navBar.layer.cornerRadius = 5.0
+        navBar.backgroundColor = UIColor.black
+        navBar.tintColor = UIColor.white
+        navBar.addTarget(self, action: #selector(printer), for: .valueChanged)
         
-        addWall(a: CGPoint(x: 325, y: 600), b: CGPoint(x: 325, y: 500))
-        addWall(a: CGPoint(x: 50, y: 600), b: CGPoint(x: 50, y: 500))
+        self.view.addSubview(navBar)
+        self.view.addSubview(slider)
+        self.view.addSubview(label)
+        self.view.addSubview(deleteBtn)
         
-        addWall(a: CGPoint(x: 50, y: 400), b: CGPoint(x: 375/2, y: 450))
-        addWall(a: CGPoint(x: 375/2, y: 450), b: CGPoint(x: 325, y: 400))
-        addWall(a: CGPoint(x: 325, y: 400), b: CGPoint(x: 375/2, y: 350))
-        addWall(a: CGPoint(x: 375/2, y: 350), b: CGPoint(x: 50, y: 400))
+        addFigure(id: 2, pos: CGPoint(x: 100, y: 100))
+        addFigure(id: 1, pos: CGPoint(x: 0, y: 0))
+        addFigure(id: 1, pos: CGPoint(x: 100, y: 400))
+    }
+    
+    func addFigure(id: Int, pos: CGPoint) {
+        let figure = SKNode()
         
+        switch id {
+        case 1:
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0)))
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0)))
+        case 2:
+            figure.addChild(addWall(a: CGPoint(x: -50, y: 0), b: CGPoint(x: 0, y: 50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 50, y: 0)))
+            figure.addChild(addWall(a: CGPoint(x: -50, y: 0), b: CGPoint(x: 50, y: 0)))
+        default:
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0)))
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50)))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0)))
+        }
+        
+        figure.position = pos
+        figure.name = "draggable"
+        
+        scene.addChild(figure)
     }
     
     func removeNodeByName(name: String) {
         for node in scene.children {
-            if node.name == name {
+            if name == "*" {
+                node.removeFromParent()
+            } else if node.name == name {
                 node.removeFromParent()
             }
         }
     }
     
-    func addWall(a: CGPoint, b: CGPoint) {
+    @objc func onSliderValChanged(slider: UISlider, event: UIEvent) {
+        let value = Float(round(10000*slider.value)/10000)
+        if let touchEvent = event.allTouches?.first {
+            switch touchEvent.phase {
+            case .began:
+                optical_n = value
+                label.text = "\(value)"
+            case .moved:
+                optical_n = value
+                label.text = "\(value)"
+            case .ended:
+                optical_n = value
+                label.text = "\(value)"
+            default:
+                break
+            }
+        }
+    }
+    
+    @objc func printer() {
+        print(navBar.selectedSegmentIndex)
+    }
+    
+    @objc func deletebtnPressed() {
+        removeNodeByName(name: "*")
+        t1x = -50
+        t1y = -50
+        nowangle = 0
+    }
+    
+    func addWall(a: CGPoint, b: CGPoint) -> SKNode {
         let yourline = SKShapeNode()
+//        yourline.userData = ["n": 1.33]
         let pathToDraw = CGMutablePath()
         pathToDraw.move(to: a)
         pathToDraw.addLine(to: b)
@@ -72,7 +153,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         yourline.glowWidth = 1.0
         yourline.physicsBody = SKPhysicsBody(edgeFrom: a, to: b)
         yourline.physicsBody?.isDynamic = false
-        scene.addChild(yourline)
+        return yourline
     }
     
     func addLine(a: CGPoint, b: CGPoint, hue: CGFloat) {
@@ -91,7 +172,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     }
     
     func startRay(point: CGPoint, angle: CGFloat, spectr: CGFloat, inside: Bool = false, index: Int = 0) {
-        if index > 6 { return }
+        if index > 100 { return }
         var angle_point = CGPoint(x: 1000 * cos(angle) + point.x, y: 1000 * sin(angle) + point.y)
         
         let correctedPoint = CGPoint(x: point.x + 1000 * cos(angle) * 0.002, y: point.y + 1000 * sin(angle) * 0.002)
@@ -100,6 +181,9 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
             if !isFound {
                 isFound = true
                 angle_point = collpoint
+//                if body.node?.userData != nil {
+//                    print(body.node?.userData)
+//                }
                 
                 let angleNormal = atan2(vector.dy, vector.dx)
                 
@@ -148,19 +232,68 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         }
     }
     
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for touch in touches {
-            if touch.hash == t1h {
-                t1h = 0
-                removeNodeByName(name: "point1")
-            } else if touch.hash == t2h {
-                t2h = 0
-                removeNodeByName(name: "point2")
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        print(navBar.selectedSegmentIndex)
+        if navBar.selectedSegmentIndex == 0 {
+            for touch in touches {
+                t1x = touch.preciseLocation(in: self.view).x
+                t1y = touch.preciseLocation(in: self.view).y
+                updateScene(point: CGPoint(x: t1x, y: t1y))
+            }
+        } else if navBar.selectedSegmentIndex == 1 {
+            if let touch = touches.first {
+                let location = touch.location(in: self.scene)
+                
+                let touchedNodes = self.scene.nodes(at: location)
+                for node in touchedNodes.reversed() {
+                    if node.name == "draggable" {
+                        self.currentNode = node
+                    }
+                }
+            }
+        } else if navBar.selectedSegmentIndex == 2 {
+            for touch in touches {
+                let x = touch.preciseLocation(in: self.view).x
+                let y = touch.preciseLocation(in: self.view).y
+                //                Creating figures here
+                updateScene(point: CGPoint(x: t1x, y: t1y))
             }
         }
     }
     
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if navBar.selectedSegmentIndex == 0 {
+            for touch in touches {
+                if touch.hash == t1h {
+                    t1h = 0
+                    removeNodeByName(name: "point1")
+                } else if touch.hash == t2h {
+                    t2h = 0
+                    removeNodeByName(name: "point2")
+                }
+            }
+        } else if navBar.selectedSegmentIndex == 1 {
+            self.currentNode = nil
+        }
+    }
+    
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if navBar.selectedSegmentIndex == 1 {
+            if let touch = touches.first, let node = self.currentNode {
+                let touchLocation = touch.location(in: self.scene)
+                node.position = touchLocation
+                updateScene(point: CGPoint(x: t1x, y: t1y))
+            }
+            return
+        } else if navBar.selectedSegmentIndex == 2 {
+            for touch in touches {
+                let x = touch.preciseLocation(in: self.view).x
+                let y = touch.preciseLocation(in: self.view).y
+//                Creating figures here
+                updateScene(point: CGPoint(x: t1x, y: t1y))
+            }
+            return
+        }
         // state is needed to define if touch is 1 or 2 (2 = true)
         var state:Bool = false
         
