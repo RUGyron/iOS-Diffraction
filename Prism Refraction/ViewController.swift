@@ -12,8 +12,8 @@ import SpriteKit
 class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     
     var scene: SKScene = SKScene(size: .zero)
-    var nowangle: CGFloat = .pi / 2
-    var optical_n: Float = 0.0
+    var nowangle: CGFloat = .pi
+    var optical_n: Float = 1.0
     
 //    Mechanics
     var t1x = CGFloat()
@@ -25,6 +25,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     var rects = [[[CGFloat]]]()
 //    GUI
     var navBar = UISegmentedControl(items: ["Лучи", "Перемещение", "Среды"])
+    var formBar = UISegmentedControl(items: ["Ромб", "Треугольник", "Квадрат"])
     var slider = UISlider()
     var label = UILabel()
     var deleteBtn = UIButton()
@@ -45,54 +46,67 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     }
     
     func setupInterface() {
-        deleteBtn.frame = CGRect(x: 250, y: 15, width: 150, height: 100)
+        deleteBtn.frame = CGRect(x: 325/2, y: 100, width: 150, height: 30)
+        deleteBtn.center.x = self.view.center.x
         deleteBtn.setTitle("Очистить", for: .normal)
         deleteBtn.addTarget(self, action: #selector(deletebtnPressed), for: .touchDown)
         
-        slider.frame = CGRect(x: 50, y: self.view.frame.size.height - 100,  width: 275, height: 50)
+        slider.frame = CGRect(x: 50, y: self.view.frame.size.height - 150,  width: 275, height: 50)
         slider.minimumValue = 1.0003
         slider.maximumValue = 2.42
         slider.addTarget(self, action: #selector(onSliderValChanged(slider:event:)), for: .valueChanged)
+        slider.isHidden = true
         
-        label.frame = CGRect(x: 350/2, y: self.view.frame.size.height - 150, width: 100, height: 50)
+        label.frame = CGRect(x: 175, y: self.view.frame.size.height - 200, width: 100, height: 50)
         label.textColor = .white
         label.text = "\(slider.value)"
+        label.isHidden = true
         
         navBar.selectedSegmentIndex = 0
-        navBar.frame = CGRect(x: 50, y: 50, width: 200, height: 30)
+        navBar.frame = CGRect(x: 10, y: 50, width: self.view.frame.size.width - 20, height: 30)
         navBar.layer.cornerRadius = 5.0
         navBar.backgroundColor = UIColor.black
         navBar.tintColor = UIColor.white
-        navBar.addTarget(self, action: #selector(printer), for: .valueChanged)
+        navBar.addTarget(self, action: #selector(navigator), for: .valueChanged)
+        
+        formBar.selectedSegmentIndex = 0
+        formBar.frame = CGRect(x: 10, y: self.view.frame.size.height - 100, width: self.view.frame.size.width - 20, height: 30)
+        formBar.layer.cornerRadius = 5.0
+        formBar.backgroundColor = UIColor.black
+        formBar.tintColor = UIColor.white
+        formBar.addTarget(self, action: #selector(former), for: .valueChanged)
+        formBar.isHidden = true
         
         self.view.addSubview(navBar)
         self.view.addSubview(slider)
         self.view.addSubview(label)
         self.view.addSubview(deleteBtn)
-        
-        addFigure(id: 2, pos: CGPoint(x: 100, y: 100))
-        addFigure(id: 1, pos: CGPoint(x: 0, y: 0))
-        addFigure(id: 1, pos: CGPoint(x: 100, y: 400))
+        self.view.addSubview(formBar)
     }
     
-    func addFigure(id: Int, pos: CGPoint) {
+    func addFigure(id: Int, pos: CGPoint, n: Float) {
         let figure = SKNode()
         
         switch id {
+        case 0:
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50), n: n))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0), n: n))
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50), n: n))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0), n: n))
         case 1:
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50)))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0)))
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50)))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0)))
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 100), n: n))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: 100), b: CGPoint(x: 75, y: 0), n: n))
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 75, y: 0), n: n))
         case 2:
-            figure.addChild(addWall(a: CGPoint(x: -50, y: 0), b: CGPoint(x: 0, y: 50)))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 50, y: 0)))
-            figure.addChild(addWall(a: CGPoint(x: -50, y: 0), b: CGPoint(x: 50, y: 0)))
+            figure.addChild(addWall(a: CGPoint(x: -75, y: 75), b: CGPoint(x: 75, y: 75), n: n))
+            figure.addChild(addWall(a: CGPoint(x: 75, y: 75), b: CGPoint(x: 75, y: -75), n: n))
+            figure.addChild(addWall(a: CGPoint(x: 75, y: -75), b: CGPoint(x: -75, y: -75), n: n))
+            figure.addChild(addWall(a: CGPoint(x: -75, y: -75), b: CGPoint(x: -75, y: 75), n: n))
         default:
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50)))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0)))
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50)))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0)))
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50), n: n))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0), n: n))
+            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50), n: n))
+            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0), n: n))
         }
         
         figure.position = pos
@@ -103,10 +117,13 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     
     func removeNodeByName(name: String) {
         for node in scene.children {
-            if name == "*" {
+            switch name {
+            case "*":
                 node.removeFromParent()
-            } else if node.name == name {
+            case node.name:
                 node.removeFromParent()
+            default:
+                ()
             }
         }
     }
@@ -130,8 +147,36 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         }
     }
     
-    @objc func printer() {
-        print(navBar.selectedSegmentIndex)
+    @objc func navigator() {
+        switch navBar.selectedSegmentIndex {
+        case 0:
+            slider.isHidden = true
+            label.isHidden = true
+            formBar.isHidden = true
+        case 1:
+            slider.isHidden = true
+            label.isHidden = true
+            formBar.isHidden = true
+        case 2:
+            slider.isHidden = false
+            label.isHidden = false
+            formBar.isHidden = false
+        default:
+            fatalError()
+        }
+    }
+    
+    @objc func former() {
+        switch formBar.selectedSegmentIndex {
+        case 0:
+            ()
+        case 1:
+            ()
+        case 2:
+            ()
+        default:
+            fatalError()
+        }
     }
     
     @objc func deletebtnPressed() {
@@ -141,9 +186,9 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         nowangle = 0
     }
     
-    func addWall(a: CGPoint, b: CGPoint) -> SKNode {
+    func addWall(a: CGPoint, b: CGPoint, n: Float) -> SKNode {
         let yourline = SKShapeNode()
-//        yourline.userData = ["n": 1.33]
+        yourline.userData = ["n": n]
         let pathToDraw = CGMutablePath()
         pathToDraw.move(to: a)
         pathToDraw.addLine(to: b)
@@ -153,6 +198,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         yourline.glowWidth = 1.0
         yourline.physicsBody = SKPhysicsBody(edgeFrom: a, to: b)
         yourline.physicsBody?.isDynamic = false
+        yourline.physicsBody?.usesPreciseCollisionDetection = true
         return yourline
     }
     
@@ -181,18 +227,19 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
             if !isFound {
                 isFound = true
                 angle_point = collpoint
-//                if body.node?.userData != nil {
-//                    print(body.node?.userData)
-//                }
+                var n = CGFloat()
+                if body.node?.userData != nil {
+                    n = body.node?.userData!["n"] as! CGFloat
+                }
                 
                 let angleNormal = atan2(vector.dy, vector.dx)
                 
                 let angleA = angleNormal - fmod(angle, .pi * 2)
                 var angleB: CGFloat = 0.0
                 if !inside {
-                    angleB = asin(sin(angleA) / 1.33) * ((0.857 - spectr) * 0.2 + 0.8)
+                    angleB = asin(sin(angleA) / n) * ((0.857 - spectr) * 0.2 + 0.8)
                 } else {
-                    angleB = asin(sin(angleA) * 1.33) * 1/((0.857 - spectr) * 0.2 + 0.8)
+                    angleB = asin(sin(angleA) * n) * 1/((0.857 - spectr) * 0.2 + 0.8)
                 }
                 
                 let currentAngle: CGFloat = angleNormal + .pi + angleB
@@ -203,12 +250,12 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     }
     
     func addPoint(point: CGPoint, num: Int) {
-        let circle = SKShapeNode(circleOfRadius: 30 )
+        let circle = SKShapeNode(circleOfRadius: 20 )
         circle.position = point
         circle.strokeColor = SKColor.black
         circle.glowWidth = 2.0
         circle.name = "point\(num)"
-        circle.fillColor = SKColor.orange
+        circle.fillColor = SKColor.white
         scene.addChild(circle)
     }
     
@@ -219,10 +266,6 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         } else if num == 2 {
             addPoint(point: CGPoint(x: t2x, y: t2y), num: 2)
         }
-    }
-    
-    func update(_ currentTime: TimeInterval, for scene: SKScene) {
-        // updateScene()
     }
     
     func updateScene(point: CGPoint) {
@@ -254,8 +297,9 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         } else if navBar.selectedSegmentIndex == 2 {
             for touch in touches {
                 let x = touch.preciseLocation(in: self.view).x
-                let y = touch.preciseLocation(in: self.view).y
-                //                Creating figures here
+                let y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
+                let formId = formBar.selectedSegmentIndex
+                addFigure(id: formId, pos: CGPoint(x: x, y: y), n: optical_n)
                 updateScene(point: CGPoint(x: t1x, y: t1y))
             }
         }
@@ -288,7 +332,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         } else if navBar.selectedSegmentIndex == 2 {
             for touch in touches {
                 let x = touch.preciseLocation(in: self.view).x
-                let y = touch.preciseLocation(in: self.view).y
+                let y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
 //                Creating figures here
                 updateScene(point: CGPoint(x: t1x, y: t1y))
             }
