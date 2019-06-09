@@ -280,7 +280,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         if navBar.selectedSegmentIndex == 0 {
             for touch in touches {
                 t1x = touch.preciseLocation(in: self.view).x
-                t1y = touch.preciseLocation(in: self.view).y
+                t1y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
                 updateScene(point: CGPoint(x: t1x, y: t1y))
             }
         } else if navBar.selectedSegmentIndex == 1 {
