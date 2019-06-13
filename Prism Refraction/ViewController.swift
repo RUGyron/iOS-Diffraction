@@ -23,6 +23,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     var t1h = Int()
     var t2h = Int()
     var rects = [[[CGFloat]]]()
+    var inside = false
 //    GUI
     var navBar = UISegmentedControl(items: ["Лучи", "Перемещение", "Среды"])
     var formBar = UISegmentedControl(items: ["Ромб", "Треугольник", "Квадрат"])
@@ -217,7 +218,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         }
     }
     
-    func startRay(point: CGPoint, angle: CGFloat, spectr: CGFloat, inside: Bool = false, index: Int = 0) {
+    func startRay(point: CGPoint, angle: CGFloat, spectr: CGFloat, ins: Bool = false, index: Int = 0) {
         if index > 100 { return }
         var angle_point = CGPoint(x: 1000 * cos(angle) + point.x, y: 1000 * sin(angle) + point.y)
         
@@ -231,19 +232,24 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
                 if body.node?.userData != nil {
                     n = body.node?.userData!["n"] as! CGFloat
                 }
-                
+            
                 let angleNormal = atan2(vector.dy, vector.dx)
                 
                 let angleA = angleNormal - fmod(angle, .pi * 2)
                 var angleB: CGFloat = 0.0
-                if !inside {
+                if !self.inside {
+                    self.inside = true
                     angleB = asin(sin(angleA) / n) * ((0.857 - spectr) * 0.2 + 0.8)
                 } else {
                     angleB = asin(sin(angleA) * n) * 1/((0.857 - spectr) * 0.2 + 0.8)
+                    if angleB.isNaN {
+                        angleB = angleA
+                    } else {
+                        self.inside = false
+                    }
                 }
-                
                 let currentAngle: CGFloat = angleNormal + .pi + angleB
-                self.startRay(point: collpoint, angle: currentAngle, spectr: spectr, inside: !inside, index: index + 1)
+                self.startRay(point: collpoint, angle: currentAngle, spectr: spectr, ins: self.inside, index: index + 1)
             }
         }
         self.addLine(a: point, b: angle_point, hue: spectr)
@@ -270,6 +276,18 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     
     func updateScene(point: CGPoint) {
         removeNodeByName(name: "ray")
+        inside = false
+        print("before", inside)
+        for node in scene.children {
+            if node.name == "ray" || node.name == "point1" || node.name == "point2" {
+                continue
+            }
+            if node.contains(point) {
+                inside = true
+                break
+            }
+        }
+        print("after", inside)
         for i in 0...30 {
             startRay(point: point, angle: nowangle, spectr: CGFloat(i) / 35)
         }
@@ -278,10 +296,44 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         print(navBar.selectedSegmentIndex)
         if navBar.selectedSegmentIndex == 0 {
-            for touch in touches {
-                t1x = touch.preciseLocation(in: self.view).x
-                t1y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
-                updateScene(point: CGPoint(x: t1x, y: t1y))
+            if touches.count == 2 {
+                for touch in touches {
+                    if t1h == 0 {
+                        t1h = touch.hash
+                        t1x = touch.preciseLocation(in: self.view).x
+                        t1y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
+                        updateScene(point: CGPoint(x: t1x, y: t1y))
+                    } else if t1h != 0 {
+                        t2h = touch.hash
+                        t2x = touch.preciseLocation(in: self.view).x
+                        t2y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
+                        // changing an angle
+                        nowangle = atan((t2y - t1y) / (t2x - t1x))
+                        if (t2x - t1x) < 0 {
+                            nowangle += .pi
+                        }
+                        updateScene(point: CGPoint(x: t1x, y: t1y))
+                    }
+                }
+            } else if touches.count == 1 {
+                for touch in touches {
+                    if t1h != 0 {
+                        t2h = touch.hash
+                        t2x = touch.preciseLocation(in: self.view).x
+                        t2y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
+                        // changing an angle
+                        nowangle = atan((t2y - t1y) / (t2x - t1x))
+                        if (t2x - t1x) < 0 {
+                            nowangle += .pi
+                        }
+                        updateScene(point: CGPoint(x: t1x, y: t1y))
+                    } else if t1h == 0 {
+                        t1h = touch.hash
+                        t1x = touch.preciseLocation(in: self.view).x
+                        t1y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
+                        updateScene(point: CGPoint(x: t1x, y: t1y))
+                    }
+                }
             }
         } else if navBar.selectedSegmentIndex == 1 {
             if let touch = touches.first {
@@ -326,7 +378,9 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
             if let touch = touches.first, let node = self.currentNode {
                 let touchLocation = touch.location(in: self.scene)
                 node.position = touchLocation
+                print("start")
                 updateScene(point: CGPoint(x: t1x, y: t1y))
+                print("end")
             }
             return
         } else if navBar.selectedSegmentIndex == 2 {
@@ -394,14 +448,26 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         } else if t1h == 0 {
             // tap1 choosen (start)
             for touch in touches {
-                t1h = touch.hash
-                t1x = touch.preciseLocation(in: self.view).x
-                t1y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
-                updateScene(point: CGPoint(x: t1x, y: t1y))
-                updatePoint(num: 1)
-                for node in scene.children {
-                    if node.name == "point2" {
-                        removeNodeByName(name: "point2")
+                if touch.hash == t2h {
+                    t2x = touch.preciseLocation(in: self.view).x
+                    t2y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
+                    // changing an angle
+                    nowangle = atan((t2y - t1y) / (t2x - t1x))
+                    if (t2x - t1x) < 0 {
+                        nowangle += .pi
+                    }
+                    updateScene(point: CGPoint(x: t1x, y: t1y))
+                    updatePoint(num: 2)
+                } else {
+                    t1h = touch.hash
+                    t1x = touch.preciseLocation(in: self.view).x
+                    t1y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
+                    updateScene(point: CGPoint(x: t1x, y: t1y))
+                    updatePoint(num: 1)
+                    for node in scene.children {
+                        if node.name == "point2" {
+                            removeNodeByName(name: "point2")
+                        }
                     }
                 }
             }
