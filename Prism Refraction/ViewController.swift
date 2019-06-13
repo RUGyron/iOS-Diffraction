@@ -219,6 +219,16 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     }
     
     func startRay(point: CGPoint, angle: CGFloat, spectr: CGFloat, ins: Bool = false, index: Int = 0) {
+        inside = false
+        for node in scene.children {
+            if node.name == "ray" || node.name == "point1" || node.name == "point2" {
+                continue
+            }
+            if node.contains(point) {
+                inside = true
+                break
+            }
+        }
         if index > 100 { return }
         var angle_point = CGPoint(x: 1000 * cos(angle) + point.x, y: 1000 * sin(angle) + point.y)
         
@@ -237,6 +247,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
                 
                 let angleA = angleNormal - fmod(angle, .pi * 2)
                 var angleB: CGFloat = 0.0
+                print(self.inside)
                 if !self.inside {
                     self.inside = true
                     angleB = asin(sin(angleA) / n) * ((0.857 - spectr) * 0.2 + 0.8)
@@ -277,7 +288,6 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     func updateScene(point: CGPoint) {
         removeNodeByName(name: "ray")
         inside = false
-        print("before", inside)
         for node in scene.children {
             if node.name == "ray" || node.name == "point1" || node.name == "point2" {
                 continue
@@ -287,10 +297,12 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
                 break
             }
         }
-        print("after", inside)
+        print("before")
         for i in 0...30 {
             startRay(point: point, angle: nowangle, spectr: CGFloat(i) / 35)
+//            break
         }
+        print("after")
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
