@@ -26,7 +26,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     var inside = false
     var corners = [CGPoint]()
 //    GUI
-    var navBar = UISegmentedControl(items: ["Лучи", "Перемещение", "Среды"])
+    var navBar = UISegmentedControl(items: ["Лучи", "Среды"])
     var formBar = UISegmentedControl(items: ["Ромб", "Треугольник", "Квадрат"])
     var slider = UISlider()
     var label = UILabel()
@@ -86,7 +86,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         self.view.addSubview(formBar)
     }
     
-    func addFigure(id: Int, pos: CGPoint, n: Float) {
+    func addFigure(id: Int, pos: CGPoint, n: Float) -> SKShapeNode {
         let figure = SKShapeNode()
         let path = UIBezierPath()
         
@@ -141,9 +141,10 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         figure.path = path.cgPath
         
         figure.physicsBody = SKPhysicsBody(edgeLoopFrom: path.cgPath)
-        figure.physicsBody?.isDynamic = false
+        figure.physicsBody?.isDynamic = true
         
         scene.addChild(figure)
+        return figure
     }
     
     func removeNodeByName(name: String) {
@@ -185,9 +186,9 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
             label.isHidden = true
             formBar.isHidden = true
         case 1:
-            slider.isHidden = true
-            label.isHidden = true
-            formBar.isHidden = true
+            slider.isHidden = false
+            label.isHidden = false
+            formBar.isHidden = false
         case 2:
             slider.isHidden = false
             label.isHidden = false
@@ -365,21 +366,26 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         } else if navBar.selectedSegmentIndex == 1 {
             if let touch = touches.first {
                 let location = touch.location(in: self.scene)
-                
+                if self.scene.nodes(at: location) == [] {
+                    let x = touch.preciseLocation(in: self.view).x
+                    let y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
+                    let formId = formBar.selectedSegmentIndex
+                    let node = addFigure(id: formId, pos: CGPoint(x: x, y: y), n: optical_n)
+                    for n in scene.children {
+                        if n == node || n.name == "ray" {continue}
+                        if n.intersects(node) {
+                            node.removeFromParent()
+                            break
+                        }
+                    }
+                    updateScene(point: CGPoint(x: t1x, y: t1y))
+                }
                 let touchedNodes = self.scene.nodes(at: location)
                 for node in touchedNodes.reversed() {
                     if node.name == "draggable" {
                         self.currentNode = node
                     }
                 }
-            }
-        } else if navBar.selectedSegmentIndex == 2 {
-            for touch in touches {
-                let x = touch.preciseLocation(in: self.view).x
-                let y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
-                let formId = formBar.selectedSegmentIndex
-                addFigure(id: formId, pos: CGPoint(x: x, y: y), n: optical_n)
-                updateScene(point: CGPoint(x: t1x, y: t1y))
             }
         }
     }
@@ -404,16 +410,17 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         if navBar.selectedSegmentIndex == 1 {
             if let touch = touches.first, let node = self.currentNode {
                 let touchLocation = touch.location(in: self.scene)
+                let nodeLocation = node.position
                 node.position = touchLocation
-                updateScene(point: CGPoint(x: t1x, y: t1y))
-            }
-            return
-        } else if navBar.selectedSegmentIndex == 2 {
-            for touch in touches {
-                let x = touch.preciseLocation(in: self.view).x
-                let y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
-//                Creating figures here
-                updateScene(point: CGPoint(x: t1x, y: t1y))
+                for n in scene.children {
+                    if n == node || n.name == "ray" {continue}
+                    if !n.intersects(node) {
+                        updateScene(point: CGPoint(x: t1x, y: t1y))
+                    } else {
+                        node.position = nodeLocation
+                        updateScene(point: CGPoint(x: t1x, y: t1y))
+                    }
+                }
             }
             return
         }
