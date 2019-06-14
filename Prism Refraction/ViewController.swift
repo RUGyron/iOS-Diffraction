@@ -24,6 +24,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     var t2h = Int()
     var rects = [[[CGFloat]]]()
     var inside = false
+    var corners = [CGPoint]()
 //    GUI
     var navBar = UISegmentedControl(items: ["Лучи", "Перемещение", "Среды"])
     var formBar = UISegmentedControl(items: ["Ромб", "Треугольник", "Квадрат"])
@@ -41,7 +42,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         sceneView.isMultipleTouchEnabled = true
         sceneView.presentScene(scene)
         sceneView.showsFPS = false
-        sceneView.showsPhysics = false
+        sceneView.showsPhysics = true
         self.view.addSubview(sceneView)
         setupInterface()
     }
@@ -86,32 +87,61 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     }
     
     func addFigure(id: Int, pos: CGPoint, n: Float) {
-        let figure = SKNode()
+        let figure = SKShapeNode()
+        let path = UIBezierPath()
         
         switch id {
         case 0:
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50), n: n))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0), n: n))
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50), n: n))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0), n: n))
+            path.move(to: CGPoint(x: -100, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: 50))
+            path.addLine(to: CGPoint(x: 100, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: -50))
+            path.close()
+            corners.append(CGPoint(x: -100 + pos.x, y: 0 + pos.y))
+            corners.append(CGPoint(x: 0 + pos.x, y: 50 + pos.y))
+            corners.append(CGPoint(x: 100 + pos.x, y: 0 + pos.y))
+            corners.append(CGPoint(x: 0 + pos.x, y: -50 + pos.y))
         case 1:
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 100), n: n))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: 100), b: CGPoint(x: 75, y: 0), n: n))
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 75, y: 0), n: n))
+            path.move(to: CGPoint(x: -100, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: 75))
+            path.addLine(to: CGPoint(x: 100, y: 0))
+            path.close()
+            corners.append(CGPoint(x: -100 + pos.x, y: 0 + pos.y))
+            corners.append(CGPoint(x: 0 + pos.x, y: 75 + pos.y))
+            corners.append(CGPoint(x: 100 + pos.x, y: 0 + pos.y))
         case 2:
-            figure.addChild(addWall(a: CGPoint(x: -75, y: 75), b: CGPoint(x: 75, y: 75), n: n))
-            figure.addChild(addWall(a: CGPoint(x: 75, y: 75), b: CGPoint(x: 75, y: -75), n: n))
-            figure.addChild(addWall(a: CGPoint(x: 75, y: -75), b: CGPoint(x: -75, y: -75), n: n))
-            figure.addChild(addWall(a: CGPoint(x: -75, y: -75), b: CGPoint(x: -75, y: 75), n: n))
+            path.move(to: CGPoint(x: -75, y: -75))
+            path.addLine(to: CGPoint(x: -75, y: 75))
+            path.addLine(to: CGPoint(x: 75, y: 75))
+            path.addLine(to: CGPoint(x: 75, y: -75))
+            path.close()
+            corners.append(CGPoint(x: -75 + pos.x, y: -75 + pos.y))
+            corners.append(CGPoint(x: -75 + pos.x, y: 75 + pos.y))
+            corners.append(CGPoint(x: 75 + pos.x, y: 75 + pos.y))
+            corners.append(CGPoint(x: 75 + pos.x, y: -75 + pos.y))
         default:
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: 50), n: n))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: 50), b: CGPoint(x: 100, y: 0), n: n))
-            figure.addChild(addWall(a: CGPoint(x: -100, y: 0), b: CGPoint(x: 0, y: -50), n: n))
-            figure.addChild(addWall(a: CGPoint(x: 0, y: -50), b: CGPoint(x: 100, y: 0), n: n))
+            path.move(to: CGPoint(x: -100, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: 50))
+            path.addLine(to: CGPoint(x: 100, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: 50))
+            path.close()
+            corners.append(CGPoint(x: -100 + pos.x, y: 0 + pos.y))
+            corners.append(CGPoint(x: 0 + pos.x, y: 50 + pos.y))
+            corners.append(CGPoint(x: 100 + pos.x, y: 0 + pos.y))
+            corners.append(CGPoint(x: 0 + pos.x, y: 50 + pos.y))
+            
         }
+        
+        figure.userData = ["n": n]
+        figure.strokeColor = .gray
+        figure.glowWidth = 1.0
         
         figure.position = pos
         figure.name = "draggable"
+        figure.path = path.cgPath
+        
+        figure.physicsBody = SKPhysicsBody(edgeLoopFrom: path.cgPath)
+        figure.physicsBody?.isDynamic = false
         
         scene.addChild(figure)
     }
@@ -187,22 +217,6 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         nowangle = 0
     }
     
-    func addWall(a: CGPoint, b: CGPoint, n: Float) -> SKNode {
-        let yourline = SKShapeNode()
-        yourline.userData = ["n": n]
-        let pathToDraw = CGMutablePath()
-        pathToDraw.move(to: a)
-        pathToDraw.addLine(to: b)
-        yourline.path = pathToDraw
-        yourline.strokeColor = .gray
-        yourline.name = "wall"
-        yourline.glowWidth = 1.0
-        yourline.physicsBody = SKPhysicsBody(edgeFrom: a, to: b)
-        yourline.physicsBody?.isDynamic = false
-        yourline.physicsBody?.usesPreciseCollisionDetection = true
-        return yourline
-    }
-    
     func addLine(a: CGPoint, b: CGPoint, hue: CGFloat) {
         if a != b && !a.x.isNaN && !a.y.isNaN && !b.x.isNaN && !b.y.isNaN {
             let yourline = SKShapeNode()
@@ -218,17 +232,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         }
     }
     
-    func startRay(point: CGPoint, angle: CGFloat, spectr: CGFloat, ins: Bool = false, index: Int = 0) {
-        inside = false
-        for node in scene.children {
-            if node.name == "ray" || node.name == "point1" || node.name == "point2" {
-                continue
-            }
-            if node.contains(point) {
-                inside = true
-                break
-            }
-        }
+    func startRay(point: CGPoint, angle: CGFloat, spectr: CGFloat, index: Int = 0) {
         if index > 100 { return }
         var angle_point = CGPoint(x: 1000 * cos(angle) + point.x, y: 1000 * sin(angle) + point.y)
         
@@ -247,7 +251,6 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
                 
                 let angleA = angleNormal - fmod(angle, .pi * 2)
                 var angleB: CGFloat = 0.0
-                print(self.inside)
                 if !self.inside {
                     self.inside = true
                     angleB = asin(sin(angleA) / n) * ((0.857 - spectr) * 0.2 + 0.8)
@@ -255,12 +258,16 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
                     angleB = asin(sin(angleA) * n) * 1/((0.857 - spectr) * 0.2 + 0.8)
                     if angleB.isNaN {
                         angleB = angleA
+                        if self.corners.contains(point) {
+                            print("contains!")
+                            self.inside = false
+                        }
                     } else {
                         self.inside = false
                     }
                 }
                 let currentAngle: CGFloat = angleNormal + .pi + angleB
-                self.startRay(point: collpoint, angle: currentAngle, spectr: spectr, ins: self.inside, index: index + 1)
+                self.startRay(point: collpoint, angle: currentAngle, spectr: spectr, index: index + 1)
             }
         }
         self.addLine(a: point, b: angle_point, hue: spectr)
@@ -285,24 +292,26 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         }
     }
     
-    func updateScene(point: CGPoint) {
-        removeNodeByName(name: "ray")
-        inside = false
+    func updateInside(point: CGPoint) {
+        self.inside = false
         for node in scene.children {
-            if node.name == "ray" || node.name == "point1" || node.name == "point2" {
-                continue
-            }
+            if node.name == "ray" || node.name == "point1" || node.name == "point2" {continue}
             if node.contains(point) {
-                inside = true
+                self.inside = true
                 break
             }
         }
-        print("before")
+    }
+    
+    func updateScene(point: CGPoint) {
+        removeNodeByName(name: "ray")
+//        print("before")
         for i in 0...30 {
+            updateInside(point: point)
             startRay(point: point, angle: nowangle, spectr: CGFloat(i) / 35)
-//            break
+            break
         }
-        print("after")
+//        print("after")
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -390,9 +399,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
             if let touch = touches.first, let node = self.currentNode {
                 let touchLocation = touch.location(in: self.scene)
                 node.position = touchLocation
-                print("start")
                 updateScene(point: CGPoint(x: t1x, y: t1y))
-                print("end")
             }
             return
         } else if navBar.selectedSegmentIndex == 2 {
