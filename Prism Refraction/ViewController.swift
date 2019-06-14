@@ -251,19 +251,25 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
                 
                 let angleA = angleNormal - fmod(angle, .pi * 2)
                 var angleB: CGFloat = 0.0
+//                print(self.inside)
+                let betweenPoint = CGPoint(x: (point.x + collpoint.x)/2, y: (point.y + collpoint.y)/2)
+                self.updateInside(point: betweenPoint)
                 if !self.inside {
-                    self.inside = true
+//                    self.inside = true
                     angleB = asin(sin(angleA) / n) * ((0.857 - spectr) * 0.2 + 0.8)
                 } else {
                     angleB = asin(sin(angleA) * n) * 1/((0.857 - spectr) * 0.2 + 0.8)
                     if angleB.isNaN {
                         angleB = angleA
-                        if self.corners.contains(point) {
-                            print("contains!")
-                            self.inside = false
-                        }
+//                        for corner in self.corners {
+//                            print(abs(corner.x - collpoint.x), abs(corner.y - collpoint.y))
+//                            if abs(corner.x - collpoint.x) < 10 && abs(corner.y - collpoint.y) < 10 {
+//                                self.inside = false
+//                                break
+//                            }
+//                        }
                     } else {
-                        self.inside = false
+//                        self.inside = false
                     }
                 }
                 let currentAngle: CGFloat = angleNormal + .pi + angleB
@@ -309,7 +315,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         for i in 0...30 {
             updateInside(point: point)
             startRay(point: point, angle: nowangle, spectr: CGFloat(i) / 35)
-            break
+//            break
         }
 //        print("after")
     }
