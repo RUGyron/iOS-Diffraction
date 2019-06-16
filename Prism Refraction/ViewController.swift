@@ -25,13 +25,18 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     var rects = [[[CGFloat]]]()
     var inside = false
     var corners = [CGPoint]()
+    var raysCount: Int = 0
+    var rayGlowWidth: CGFloat = 2.0
+    var rayStrokeColor = UIColor(hue: 0.0, saturation: 4.0, brightness: 4.0, alpha: 1.0)
 //    GUI
     var navBar = UISegmentedControl(items: ["Лучи", "Среды"])
-    var formBar = UISegmentedControl(items: ["Ромб", "Треугольник", "Квадрат"])
+    var formBar = UISegmentedControl(items: ["Ромб", "Треугольник", "Квадрат", "Выпуклая", "Вогнутая"])
+    var rayBar = UISegmentedControl(items: ["1 луч", "Спектр"])
     var slider = UISlider()
     var label = UILabel()
     var deleteBtn = UIButton()
     var currentNode : SKNode?
+    var background = SKSpriteNode(imageNamed: "background.png")
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,6 +53,14 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     }
     
     func setupInterface() {
+        background.position = CGPoint(x: self.view.frame.size.width / 2, y: self.view.frame.size.height / 2)
+        background.size = self.view.frame.size
+        background.yScale = 0.2
+        background.xScale = 0.9
+        background.alpha = 0.3
+        background.name = "background"
+//        background.frame = CGRect(x: self.view.frame.size.width / 2, y: self.view.frame.size.height / 2, width: 250, height: 150)
+        
         deleteBtn.frame = CGRect(x: 325/2, y: 100, width: 150, height: 30)
         deleteBtn.center.x = self.view.center.x
         deleteBtn.setTitle("Очистить", for: .normal)
@@ -76,14 +89,23 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         formBar.layer.cornerRadius = 5.0
         formBar.backgroundColor = UIColor.black
         formBar.tintColor = UIColor.white
-        formBar.addTarget(self, action: #selector(former), for: .valueChanged)
         formBar.isHidden = true
         
+        rayBar.selectedSegmentIndex = 0
+        rayBar.frame = CGRect(x: 10, y: self.view.frame.size.height - 100, width: self.view.frame.size.width - 20, height: 30)
+        rayBar.layer.cornerRadius = 5.0
+        rayBar.backgroundColor = UIColor.black
+        rayBar.tintColor = UIColor.white
+        rayBar.isHidden = false
+        rayBar.addTarget(self, action: #selector(rayChanger), for: .valueChanged)
+        
+        scene.addChild(background)
         self.view.addSubview(navBar)
         self.view.addSubview(slider)
         self.view.addSubview(label)
         self.view.addSubview(deleteBtn)
         self.view.addSubview(formBar)
+        self.view.addSubview(rayBar)
     }
     
     func addFigure(id: Int, pos: CGPoint, n: Float) -> SKShapeNode {
@@ -119,6 +141,30 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
             corners.append(CGPoint(x: -75 + pos.x, y: 75 + pos.y))
             corners.append(CGPoint(x: 75 + pos.x, y: 75 + pos.y))
             corners.append(CGPoint(x: 75 + pos.x, y: -75 + pos.y))
+        case 3:
+            let radius = 30.0
+            path.move(to: CGPoint(x: cos(0.3) * radius * 4, y: sin(0.3) * radius))
+            for radians in stride(from: 0.0 + 0.3, to: .pi - 0.3, by: .pi / 300) {
+                let pos = CGPoint(x: cos(radians) * radius * 4, y: sin(radians) * radius)
+                path.addLine(to: pos)
+            }
+            for radians in stride(from: 0.0 + 0.3 + .pi, to: .pi * 2 - 0.3, by: .pi / 300) {
+                let pos = CGPoint(x: cos(radians) * radius * 4, y: sin(radians) * radius)
+                path.addLine(to: pos)
+            }
+            path.close()
+        case 4:
+            let radius = 30.0
+            path.move(to: CGPoint(x: cos(0.3) * radius * 4, y: sin(0.3) * radius - 40))
+            for radians in stride(from: 0.0 + 0.3, to: .pi - 0.3, by: .pi / 100) {
+                let pos = CGPoint(x: cos(radians) * radius * 4, y: sin(radians) * radius - 40)
+                path.addLine(to: pos)
+            }
+            for radians in stride(from: 0.0 + 0.3 + .pi, to: .pi * 2 - 0.3, by: .pi / 100) {
+                let pos = CGPoint(x: cos(radians) * radius * 4, y: sin(radians) * radius + 40)
+                path.addLine(to: pos)
+            }
+            path.close()
         default:
             path.move(to: CGPoint(x: -100, y: 0))
             path.addLine(to: CGPoint(x: 0, y: 50))
@@ -141,7 +187,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         figure.path = path.cgPath
         
         figure.physicsBody = SKPhysicsBody(edgeLoopFrom: path.cgPath)
-        figure.physicsBody?.isDynamic = true
+        figure.physicsBody?.isDynamic = false
         
         scene.addChild(figure)
         return figure
@@ -149,6 +195,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     
     func removeNodeByName(name: String) {
         for node in scene.children {
+            if node.name == "background" {continue}
             switch name {
             case "*":
                 node.removeFromParent()
@@ -185,30 +232,29 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
             slider.isHidden = true
             label.isHidden = true
             formBar.isHidden = true
+            rayBar.isHidden = false
         case 1:
             slider.isHidden = false
             label.isHidden = false
             formBar.isHidden = false
-        case 2:
-            slider.isHidden = false
-            label.isHidden = false
-            formBar.isHidden = false
+            rayBar.isHidden = true
         default:
             fatalError()
         }
     }
     
-    @objc func former() {
-        switch formBar.selectedSegmentIndex {
+    @objc func rayChanger() {
+        switch rayBar.selectedSegmentIndex {
         case 0:
-            ()
+            raysCount = 0
+            rayGlowWidth = 2.0
         case 1:
-            ()
-        case 2:
-            ()
+            raysCount = 30
+            rayGlowWidth = 1.0
         default:
             fatalError()
         }
+        updateScene(point: CGPoint(x: t1x, y: t1y))
     }
     
     @objc func deletebtnPressed() {
@@ -225,16 +271,20 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
             pathToDraw.move(to: a)
             pathToDraw.addLine(to: b)
             yourline.path = pathToDraw
-            yourline.strokeColor = UIColor(hue: hue, saturation: 1.0, brightness: 1.0, alpha: 0.3)
+            if rayBar.selectedSegmentIndex == 0 {
+                yourline.strokeColor = rayStrokeColor
+            } else {
+                yourline.strokeColor = UIColor(hue: hue, saturation: 1.0, brightness: 1.0, alpha: 0.3)
+            }
             yourline.name = "ray"
             yourline.blendMode = .add
-            yourline.glowWidth = 1.0
+            yourline.glowWidth = rayGlowWidth
             scene.addChild(yourline)
         }
     }
     
     func startRay(point: CGPoint, angle: CGFloat, spectr: CGFloat, index: Int = 0) {
-        if index > 100 { return }
+        if index > 30 { return }
         var angle_point = CGPoint(x: 1000 * cos(angle) + point.x, y: 1000 * sin(angle) + point.y)
         
         let correctedPoint = CGPoint(x: point.x + 1000 * cos(angle) * 0.002, y: point.y + 1000 * sin(angle) * 0.002)
@@ -302,7 +352,7 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     func updateInside(point: CGPoint) {
         self.inside = false
         for node in scene.children {
-            if node.name == "ray" || node.name == "point1" || node.name == "point2" {continue}
+            if node.name == "ray" || node.name == "point1" || node.name == "point2" || node.name == "background" {continue}
             if node.contains(point) {
                 self.inside = true
                 break
@@ -312,17 +362,13 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
     
     func updateScene(point: CGPoint) {
         removeNodeByName(name: "ray")
-//        print("before")
-        for i in 0...30 {
+        for i in 0...raysCount {
             updateInside(point: point)
             startRay(point: point, angle: nowangle, spectr: CGFloat(i) / 35)
-//            break
         }
-//        print("after")
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        print(navBar.selectedSegmentIndex)
         if navBar.selectedSegmentIndex == 0 {
             if touches.count == 2 {
                 for touch in touches {
@@ -366,18 +412,23 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
         } else if navBar.selectedSegmentIndex == 1 {
             if let touch = touches.first {
                 let location = touch.location(in: self.scene)
-                if self.scene.nodes(at: location) == [] {
+                let cur_nodes = self.scene.nodes(at: location)
+                var local_state = false
+                for node in cur_nodes {
+                    if node.name != "ray" && node.name != "background" {local_state = true}
+                }
+                if !local_state {
                     let x = touch.preciseLocation(in: self.view).x
                     let y = self.view.frame.size.height - touch.preciseLocation(in: self.view).y
                     let formId = formBar.selectedSegmentIndex
                     let node = addFigure(id: formId, pos: CGPoint(x: x, y: y), n: optical_n)
-                    for n in scene.children {
-                        if n == node || n.name == "ray" {continue}
-                        if n.intersects(node) {
-                            node.removeFromParent()
-                            break
-                        }
-                    }
+//                    for n in scene.children {
+//                        if n == node || n.name == "ray" {continue}
+//                        if n.intersects(node) {
+//                            node.removeFromParent()
+//                            break
+//                        }
+//                    }
                     updateScene(point: CGPoint(x: t1x, y: t1y))
                 }
                 let touchedNodes = self.scene.nodes(at: location)
@@ -412,15 +463,16 @@ class ViewController: UIViewController, SKViewDelegate, SKSceneDelegate {
                 let touchLocation = touch.location(in: self.scene)
                 let nodeLocation = node.position
                 node.position = touchLocation
-                for n in scene.children {
-                    if n == node || n.name == "ray" {continue}
-                    if !n.intersects(node) {
-                        updateScene(point: CGPoint(x: t1x, y: t1y))
-                    } else {
-                        node.position = nodeLocation
-                        updateScene(point: CGPoint(x: t1x, y: t1y))
-                    }
-                }
+                updateScene(point: CGPoint(x: t1x, y: t1y))
+//                for n in scene.children {
+//                    if n == node || n.name == "ray" {continue}
+//                    if !n.intersects(node) {
+//                        updateScene(point: CGPoint(x: t1x, y: t1y))
+//                    } else {
+//                        node.position = nodeLocation
+//                        updateScene(point: CGPoint(x: t1x, y: t1y))
+//                    }
+//                }
             }
             return
         }
